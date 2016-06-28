@@ -3,15 +3,22 @@ import sqlite3
 import os 
 from flask import Flask, request, session, g, redirect, url_for, abort, \
     render_template, flash
+    
+from models import * 
+
 
 
 app = Flask(__name__)
+
+# login_manager = LoginManager()
 
 
 #remove debugger in prod please
 app.debug = True
 
 ### ROUTES
+
+# index page
 @app.route("/")
 def show_entries():
     db = get_db()
@@ -19,6 +26,7 @@ def show_entries():
     entries = cur.fetchall()
     return render_template('entries.html', entries=entries)
 
+# create new post
 @app.route('/add', methods=['POST'])
 def add_entry():
     if not session.get('logged_in'):
@@ -27,9 +35,10 @@ def add_entry():
     db.execute('insert into entries (title, text) values (?, ?)',
                  [request.form['title'], request.form['text']])
     db.commit()
-    flash('New Floffr has been successfuly posted')
+    flash('New post has been successfully shared.')
     return redirect(url_for('show_entries'))
 
+# Logging in
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -40,9 +49,21 @@ def login():
             error = 'Invalid password'
         else:
             session['logged_in'] = True
-            flash('Logged in FAM')
+            flash('You are now logged in. Welcome to Castalia')
             return redirect(url_for('show_entries'))
     return render_template('login.html', error=error)
+    
+# signup page
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        insertUser(username, password)
+        flash('You have successfully signed up. Welcome to Castalia')
+        return redirect(url_for('show_entries'))
+    return render_template('signup.html', error=error)
 
 @app.route('/logout')
 def logout():
@@ -50,12 +71,9 @@ def logout():
     flash('You have been successfully logged out')
     return redirect(url_for('show_entries'))
 
-@app.route('/profile')
-def rawr():
-    return render_template('profile.html') ## USE VARIABLE ROUTES http://flask.pocoo.org/docs/0.11/quickstart/#routing
+
 ### END ROUTES
 
-#db stuffz
 # Load default config 
 
 app.config.update(dict(
